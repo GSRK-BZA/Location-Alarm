@@ -1,8 +1,12 @@
-
+import Alarm from "./components/Alarm/Alarm";
+import Alarms from "./components/Alarms/Alarms";
+import Map from "./components/Map/Map";
+import "./App.css";
 function App() {
   return (
     <div className="App">
-      <h1>Location Alarm In Progress</h1>
+      <Map />
+      <Alarms />
     </div>
   );
 }
