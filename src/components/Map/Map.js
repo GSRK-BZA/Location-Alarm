@@ -1,76 +1,139 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
-require('dotenv').config();
-
-const mapapi = process.env.mapsApiKey;
-const containerStyle = {
-  width: '100%',
-  height: '400px'
-};
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { OpenStreetMapProvider } from 'leaflet-geosearch';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-geosearch/dist/geosearch.css';
+import L from 'leaflet';
+import { useEffect } from 'react';
+import 'leaflet-defaulticon-compatibility';
+import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
+import pointerImage from '../../pointer.png'; // Adjust the path as necessary
 
 const center = {
-  lat: -3.745,
-  lng: -38.523
+  lat: 12.8497,
+  lng: 77.6650
 };
 
-function Map() {
-  const [map, setMap] = useState(null);
-  const [currentPosition, setCurrentPosition] = useState(center);
-  const [selectedPosition, setSelectedPosition] = useState(null);
-  const autocompleteRef = useRef(null);
+// Create a custom icon using the pointer.jpg
+const customIcon = new L.Icon({
+  iconUrl: pointerImage,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  shadowSize: [41, 41]
+});
 
-  const onLoad = useCallback(function callback(mapInstance) {
-    setMap(mapInstance);
-  }, []);
+function useSearch(setSelectedPosition, mapRef) {
+  const [searchResults, setSearchResults] = useState([]);
+  const provider = new OpenStreetMapProvider();
 
-  const onUnmount = useCallback(function callback(mapInstance) {
-    setMap(null);
-  }, []);
-
-  const handlePlaceChanged = () => {
-    const place = autocompleteRef.current.getPlace();
-    if (place.geometry) {
-      const location = place.geometry.location;
-      setSelectedPosition({ lat: location.lat(), lng: location.lng() });
-      map.panTo(location);
+  const handleSearch = async (query) => {
+    if (query.length > 2) {
+      const results = await provider.search({ query });
+      setSearchResults(results);
+    } else {
+      setSearchResults([]);
     }
   };
 
-  const handleMapClick = (event) => {
-    setSelectedPosition({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+  const selectResult = (result) => {
+    const { x, y } = result;
+    setSelectedPosition({ lat: y, lng: x });
+    setSearchResults([]);
+    if (mapRef.current) {
+      mapRef.current.flyTo([y, x], 13);
+    }
   };
 
+  return { handleSearch, searchResults, selectResult };
+}
+
+function SearchControl({ setSelectedPosition, mapRef }) {
+  const { handleSearch, searchResults, selectResult } = useSearch(setSelectedPosition, mapRef);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   return (
-    <LoadScript googleMapsApiKey= {mapapi} libraries={['places']}>
+    <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 1000, backgroundColor: 'white', padding: '10px', borderRadius: '5px', width: '99%' }}>
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search for places"
+        style={{ padding: '5px', width: '98%' }}
+      />
+      {searchResults.length > 0 && (
+        <ul style={{ listStyle: 'none', padding: '10px 0', margin: 0, maxHeight: '200px', overflowY: 'auto' }}>
+          {searchResults.map((result, index) => (
+            <li key={index} onClick={() => selectResult(result)} style={{ cursor: 'pointer', padding: '5px 0' }}>
+              {result.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MapEvents({ setSelectedPosition }) {
+  useMapEvents({
+    click(e) {
+      setSelectedPosition(e.latlng);
+    },
+  });
+  return null;
+}
+
+function Map() {
+  const [selectedPosition, setSelectedPosition] = useState(null);
+  const mapRef = useRef(null);
+
+  const handleMapClick = useCallback((e) => {
+    setSelectedPosition(e.latlng);
+  }, []);
+
+  return (
+    <div>
       <h2>Map</h2>
-      <Autocomplete
-        onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
-        onPlaceChanged={handlePlaceChanged}
-      >
-        <input
-          type="text"
-          placeholder="Search for places"
-          style={{ width: '300px', height: '40px', marginBottom: '10px' }}
-        />
-      </Autocomplete>
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={currentPosition}
-        zoom={10}
-        onLoad={onLoad}
-        onUnmount={onUnmount}
-        onClick={handleMapClick}
-      >
-        {selectedPosition && (
-          <Marker position={selectedPosition} />
-        )}
-      </GoogleMap>
+      <div style={{ position: 'relative', height: '400px', width: '100%' }}>
+        <MapContainer
+          center={[center.lat, center.lng]}
+          zoom={13}
+          style={{ height: '100%', width: '100%' }}
+          ref={mapRef}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <SearchControl setSelectedPosition={setSelectedPosition} mapRef={mapRef} />
+          <MapEvents setSelectedPosition={setSelectedPosition} />
+          {selectedPosition && (
+            <Marker position={selectedPosition} icon={customIcon}>
+              <Popup>
+                Selected location: <br />
+                Lat: {selectedPosition.lat.toFixed(4)}, <br />
+                Lng: {selectedPosition.lng.toFixed(4)}
+              </Popup>
+            </Marker>
+          )}
+        </MapContainer>
+      </div>
       {selectedPosition && (
         <div>
-          <p>Selected Position: Lat: {selectedPosition.lat}, Lng: {selectedPosition.lng}</p>
+          <h3>Selected Position:</h3>
+          <p>Latitude: {selectedPosition.lat.toFixed(4)}</p>
+          <p>Longitude: {selectedPosition.lng.toFixed(4)}</p>
         </div>
       )}
-    </LoadScript>
+    </div>
   );
 }
 
