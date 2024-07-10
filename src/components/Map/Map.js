@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import { OpenStreetMapProvider } from 'leaflet-geosearch';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-geosearch/dist/geosearch.css';
 import L from 'leaflet';
-import { useEffect } from 'react';
 import 'leaflet-defaulticon-compatibility';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import pointerImage from '../../pointer.png'; // Adjust the path as necessary
@@ -12,6 +11,12 @@ import pointerImage from '../../pointer.png'; // Adjust the path as necessary
 const center = {
   lat: 12.8497,
   lng: 77.6650
+};
+
+// Define the target location
+const targetLocation = {
+  lat: 12.8500, // Replace with the latitude of your target location
+  lng: 77.6600 // Replace with the longitude of your target location
 };
 
 // Create a custom icon using the pointer.jpg
@@ -53,7 +58,7 @@ function SearchControl({ setSelectedPosition, mapRef }) {
   const { handleSearch, searchResults, selectResult } = useSearch(setSelectedPosition, mapRef);
   const [searchQuery, setSearchQuery] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
       handleSearch(searchQuery);
     }, 300);
@@ -91,6 +96,24 @@ function MapEvents({ setSelectedPosition }) {
   return null;
 }
 
+// Function to calculate distance between two points using Haversine formula
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+
 function Map() {
   const [selectedPosition, setSelectedPosition] = useState(null);
   const mapRef = useRef(null);
@@ -98,6 +121,24 @@ function Map() {
   const handleMapClick = useCallback((e) => {
     setSelectedPosition(e.latlng);
   }, []);
+
+  useEffect(() => {
+    if (selectedPosition) {
+      const distance = getDistanceFromLatLonInKm(
+        targetLocation.lat,
+        targetLocation.lng,
+        selectedPosition.lat,
+        selectedPosition.lng
+      );
+
+      if (distance <= 1) {
+        console.log('You are within 1km of the target location!');
+      }
+      else{
+        console.log("You still have " + distance.toFixed(2) + " km to reach the target location");
+      }
+    }
+  }, [selectedPosition]);
 
   return (
     <div>
@@ -115,6 +156,13 @@ function Map() {
           />
           <SearchControl setSelectedPosition={setSelectedPosition} mapRef={mapRef} />
           <MapEvents setSelectedPosition={setSelectedPosition} />
+          <Marker position={[targetLocation.lat, targetLocation.lng]} icon={customIcon}>
+            <Popup>
+              Target location: <br />
+              Lat: {targetLocation.lat.toFixed(4)}, <br />
+              Lng: {targetLocation.lng.toFixed(4)}
+            </Popup>
+          </Marker>
           {selectedPosition && (
             <Marker position={selectedPosition} icon={customIcon}>
               <Popup>
