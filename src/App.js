@@ -7,6 +7,7 @@ function App() {
     <div className="App">
       <Map />
       <Alarms />
+      // This is a comment
     </div>
   );
 }
