@@ -32,7 +32,25 @@ const currentLocationIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-function LocationMarker() {
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+}
+
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+
+function LocationMarker({ alarms, onToggleAlarm, setTriggeredAlarmName }) {
   const [position, setPosition] = useState(null);
   const map = useMap();
 
@@ -40,15 +58,36 @@ function LocationMarker() {
     map.locate().on("locationfound", function (e) {
       setPosition(e.latlng);
       map.flyTo(e.latlng, map.getZoom());
+
+      // Check if the current location is within any active alarm's radius
+      const activeAlarm = alarms.find(alarm => {
+        if (!alarm.active) return false;
+        const distance = getDistanceFromLatLonInKm(
+          e.latlng.lat, e.latlng.lng,
+          alarm.latitude, alarm.longitude
+        );
+        return distance <= alarm.radius;
+      });
+
+      if (activeAlarm) {
+        setTriggeredAlarmName(activeAlarm.name);
+        alert(`You are within the area of the alarm: ${activeAlarm.name}`);
+      } else {
+        setTriggeredAlarmName(null);
+      }
     });
-  }, [map]);
+  }, [map, alarms, setTriggeredAlarmName]);
 
   return position === null ? null : (
     <Marker position={position} icon={currentLocationIcon}>
-      <Popup>You are here</Popup>
+      <Popup>
+        You are here
+      </Popup>
     </Marker>
   );
 }
+
+
 
 function useSearch(setSelectedPosition, mapRef) {
   const [searchResults, setSearchResults] = useState([]);
@@ -117,10 +156,11 @@ function MapEvents({ setSelectedPosition }) {
   return null;
 }
 
-function Map({ onSaveAlarm, editingAlarm }) {
+function Map({ onSaveAlarm, editingAlarm, alarms, onToggleAlarm }) {
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [radius, setRadius] = useState(editingAlarm ? editingAlarm.radius : 1);
   const [alarmName, setAlarmName] = useState(editingAlarm ? editingAlarm.name : '');
+  const [triggeredAlarmName, setTriggeredAlarmName] = useState(null);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -154,6 +194,11 @@ function Map({ onSaveAlarm, editingAlarm }) {
   return (
     <div>
       <h2>{editingAlarm ? 'Edit Alarm' : 'Set Alarm Location'}</h2>
+      {triggeredAlarmName && (
+        <div style={{ padding: '10px', backgroundColor: 'red', color: 'white', textAlign: 'center' }}>
+          <h3>You are within the area of the alarm: {triggeredAlarmName}</h3>
+        </div>
+      )}
       <div style={{ position: 'relative', height: '400px', width: '100%' }}>
         <MapContainer
           center={[center.lat, center.lng]}
@@ -167,7 +212,7 @@ function Map({ onSaveAlarm, editingAlarm }) {
           />
           <SearchControl setSelectedPosition={setSelectedPosition} mapRef={mapRef} />
           <MapEvents setSelectedPosition={setSelectedPosition} />
-          <LocationMarker />
+          <LocationMarker alarms={alarms} onToggleAlarm={onToggleAlarm} setTriggeredAlarmName={setTriggeredAlarmName} />
           {selectedPosition && (
             <>
               <Marker position={selectedPosition} icon={customIcon}>
@@ -185,6 +230,15 @@ function Map({ onSaveAlarm, editingAlarm }) {
               />
             </>
           )}
+          {alarms.map(alarm => (
+            <Circle
+              key={alarm.id}
+              center={[alarm.latitude, alarm.longitude]}
+              radius={alarm.radius * 1000}
+              fillColor={alarm.active ? "red" : "gray"}
+              fillOpacity={0.2}
+            />
+          ))}
         </MapContainer>
       </div>
       <button onClick={handleCenterMap}>Center on My Location</button>
@@ -209,5 +263,6 @@ function Map({ onSaveAlarm, editingAlarm }) {
     </div>
   );
 }
+
 
 export default Map;
