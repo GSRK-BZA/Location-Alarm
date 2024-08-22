@@ -156,7 +156,16 @@ function MapEvents({ setSelectedPosition }) {
   return null;
 }
 
-function Map({ onSaveAlarm, editingAlarm, alarms, onToggleAlarm }) {
+function Map({
+  onSaveAlarm, 
+  editingAlarm, 
+  alarms, 
+  onToggleAlarm, 
+  setAlarms, 
+  setShowMap, 
+  setEditingAlarmId, 
+  editingAlarmId
+}) {
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [radius, setRadius] = useState(editingAlarm ? editingAlarm.radius : 1);
   const [alarmName, setAlarmName] = useState(editingAlarm ? editingAlarm.name : '');
@@ -171,17 +180,43 @@ function Map({ onSaveAlarm, editingAlarm, alarms, onToggleAlarm }) {
     }
   }, [editingAlarm]);
 
-  const handleSaveAlarm = () => {
-    if (selectedPosition && alarmName) {
-      onSaveAlarm({
-        name: alarmName,
-        latitude: selectedPosition.lat,
-        longitude: selectedPosition.lng,
-        radius: radius,
-        active: true,
-      });
+  const handleSaveAlarm = async (newAlarm) => {
+    if (editingAlarmId) {
+      setAlarms(alarms.map(alarm =>
+        alarm.id === editingAlarmId ? { ...alarm, ...newAlarm } : alarm
+      ));
+    } else {
+      try {
+        // Ensure newAlarm is a plain object
+        const sanitizedAlarm = { ...newAlarm };
+  
+        // Log the sanitizedAlarm to verify its structure
+        console.log('Sanitized Alarm:', sanitizedAlarm);
+  
+        // Send a POST request to save the new alarm to the database
+        const response = await fetch('http://localhost:3000/api/alarms/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(sanitizedAlarm),
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to save alarm');
+        }
+  
+        const savedAlarm = await response.json();
+        setAlarms([...alarms, { ...savedAlarm, id: savedAlarm._id }]); // Use MongoDB's generated ID
+      } catch (error) {
+        console.error('Error saving alarm:', error);
+      }
     }
+  
+    setShowMap(false);
+    setEditingAlarmId(null);
   };
+  
 
   const handleCenterMap = () => {
     if (mapRef.current) {

@@ -121,10 +121,14 @@ function App() {
               )}
               {showMap && (
                 <Map
-                  onSaveAlarm={handleSaveAlarm}
-                  editingAlarm={editingAlarmId ? alarms.find(alarm => alarm.id === editingAlarmId) : null}
-                  alarms={alarms}
-                  onToggleAlarm={handleToggleAlarm}
+                onSaveAlarm={handleSaveAlarm}
+                editingAlarm={editingAlarmId ? alarms.find(alarm => alarm.id === editingAlarmId) : null}
+                alarms={alarms}
+                onToggleAlarm={handleToggleAlarm}
+                setAlarms={setAlarms}           // Pass the setAlarms function as a prop
+                setShowMap={setShowMap}         // Pass the setShowMap function as a prop
+                setEditingAlarmId={setEditingAlarmId} // Pass the setEditingAlarmId function as a prop
+                editingAlarmId={editingAlarmId} // Pass editingAlarmId as a prop
                 />
               )}
             </PrivateRoute>

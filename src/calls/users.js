@@ -4,7 +4,7 @@ const { axiosInstance } = require('./index');
 // Register new User
 export const RegisterUser = async (value) => {
     try {
-        const response = await axiosInstance.post(`http://localhost:3000/register`, value);
+        const response = await axiosInstance.post(`http://localhost:3000/api/auth/register`, value);
         return response.data;
     } catch (error) {
         console.error(error);
@@ -18,7 +18,7 @@ export const RegisterUser = async (value) => {
 // Login user
 export const LoginUser = async (value) => {
     try {
-        const response = await axiosInstance.post(`http://localhost:3000/login`, value);
+        const response = await axiosInstance.post(`http://localhost:3000/api/auth/login`, value);
         return response.data;
     } catch (error) {
         console.error(error);
