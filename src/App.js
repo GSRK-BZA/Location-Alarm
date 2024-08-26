@@ -7,6 +7,7 @@ import Login from './pages/login/Login';
 import Register from './pages/register/Register';
 import PrivateRoute from './components/PrivateRoute/PrivateRoute';
 import axios from 'axios';
+import audio2 from './iphone_alarm.mp3';
 
 function App() {
   const [showMap, setShowMap] = useState(false);
@@ -45,7 +46,8 @@ function App() {
         );
 
         if (distance <= alarm.radius) {
-          alert(`You are within the radius of the alarm: ${alarm.name}`);
+          const audio = new Audio(audio2); // Adjust the path if necessary
+          audio.play();
           handleDeleteAlarm(alarm._id);
           fetchAlarms();
         }
