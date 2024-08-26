@@ -46,9 +46,8 @@ function App() {
 
         if (distance <= alarm.radius) {
           alert(`You are within the radius of the alarm: ${alarm.name}`);
-          setTimeout(() => {
-            handleDeleteAlarm(alarm._id);
-          }, 1000);
+          handleDeleteAlarm(alarm._id);
+          fetchAlarms();
         }
       });
     }
@@ -102,7 +101,7 @@ function App() {
   };
 
   useEffect(() => {
-    updateLocation(); // Initial location fetch // Initial alarms fetch
+    // updateLocation(); // Initial location fetch // Initial alarms fetch
 
     const intervalId = setInterval(() => {
       setCounter((prevCounter) => (prevCounter > 0 ? prevCounter - 1 : 15));
