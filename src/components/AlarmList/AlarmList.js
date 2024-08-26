@@ -2,16 +2,14 @@ import React from 'react';
 import Alarm from '../Alarm/Alarm';
 import './AlarmList.css';
 
-function AlarmList({ alarms, onEditAlarm, onDeleteAlarm, onToggleAlarm }) {
+function AlarmList({ alarms, onDeleteAlarm }) {
   return (
     <div className="AlarmList">
       {alarms.map((alarm) => (
         <Alarm
-          key={alarm.id}
+          key={alarm._id}
           {...alarm}
-          onEdit={(id, updates) => onEditAlarm(id, updates)}
-          onDelete={(id) => onDeleteAlarm(id)}
-          onToggle={(id) => onToggleAlarm(id)}
+          onDelete={() => onDeleteAlarm(alarm._id)}
         />
       ))}
     </div>

@@ -6,50 +6,66 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './pages/login/Login';
 import Register from './pages/register/Register';
 import PrivateRoute from './components/PrivateRoute/PrivateRoute';
+import axios from 'axios';
 
 function App() {
   const [showMap, setShowMap] = useState(false);
   const [alarms, setAlarms] = useState([]);
-  const [editingAlarmId, setEditingAlarmId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [counter, setCounter] = useState(15);
 
   const handleAddAlarm = () => {
     setShowMap(true);
-    setEditingAlarmId(null);
   };
+
+
 
   const handleSaveAlarm = (newAlarm) => {
-    if (editingAlarmId) {
-      setAlarms(alarms.map(alarm =>
-        alarm.id === editingAlarmId ? { ...alarm, ...newAlarm } : alarm
-      ));
-    } else {
-      setAlarms([...alarms, { ...newAlarm, id: Date.now() }]);
-    }
+    setAlarms([...alarms, { ...newAlarm, id: Date.now() }]);
     setShowMap(false);
-    setEditingAlarmId(null);
   };
 
-  const handleEditAlarm = (id, updates) => {
-    setAlarms(alarms.map(alarm =>
-      alarm.id === id ? { ...alarm, ...updates } : alarm
-    ));
+  const handleDeleteAlarm = async (id) => {
+    try {
+      await axios.delete(`https://server-orcin-psi.vercel.app/api/alarms/${id}`);
+      setAlarms(alarms.filter(alarm => alarm._id !== id));
+    } catch (error) {
+      console.error("Error deleting alarm:", error);
+    }
   };
 
-  const handleDeleteAlarm = (id) => {
-    setAlarms(alarms.filter(alarm => alarm.id !== id));
+  const checkAlarms = () => {
+    if (currentLocation) {
+      alarms.forEach(alarm => {
+        const distance = calculateDistance(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          alarm.latitude,
+          alarm.longitude
+        );
+
+        if (distance <= alarm.radius) {
+          alert(`You are within the radius of the alarm: ${alarm.name}`);
+          setTimeout(() => {
+            handleDeleteAlarm(alarm._id);
+          }, 1000);
+        }
+      });
+    }
   };
 
-  const handleToggleAlarm = (id) => {
-    setAlarms(alarms.map(alarm =>
-      alarm.id === id ? { ...alarm, active: !alarm.active } : alarm
-    ));
-  };
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const toRadians = (degrees) => degrees * (Math.PI / 180);
 
-  const handleEditButtonClick = (id) => {
-    setEditingAlarmId(id);
-    setShowMap(true);
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in kilometers
   };
 
   const updateLocation = () => {
@@ -68,23 +84,37 @@ function App() {
     }
   };
 
+  const fetchAlarms = async () => {
+    try {
+      const response = await axios.get('https://server-orcin-psi.vercel.app/api/alarms');
+      setAlarms(response.data);
+    } catch (error) {
+      console.error("Error fetching alarms:", error);
+    }
+  };
+
+  // fetchAlarms();
+
   const handleRefreshNow = () => {
     updateLocation();
+    fetchAlarms();
     setCounter(15); // Reset the counter after refreshing
   };
 
   useEffect(() => {
-    updateLocation(); // Initial location fetch
+    updateLocation(); // Initial location fetch // Initial alarms fetch
 
     const intervalId = setInterval(() => {
       setCounter((prevCounter) => (prevCounter > 0 ? prevCounter - 1 : 15));
       if (counter === 0) {
         updateLocation();
+        fetchAlarms();
       }
+      checkAlarms(); // Check alarms on every counter tick
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [counter]);
+  }, [counter, currentLocation, alarms]);
 
   return (
     <Router>
@@ -110,25 +140,15 @@ function App() {
                     <p>Next update in: {counter} seconds</p>
                     <button onClick={handleRefreshNow}>Refresh Now</button>
                   </div>
-                  <AlarmList
-                    alarms={alarms}
-                    onEditAlarm={handleEditAlarm}
-                    onDeleteAlarm={handleDeleteAlarm}
-                    onToggleAlarm={handleToggleAlarm}
-                    onEditButtonClick={handleEditButtonClick}
-                  />
+                  <AlarmList alarms={alarms} onDeleteAlarm={handleDeleteAlarm} />
                 </>
               )}
               {showMap && (
                 <Map
-                onSaveAlarm={handleSaveAlarm}
-                editingAlarm={editingAlarmId ? alarms.find(alarm => alarm.id === editingAlarmId) : null}
-                alarms={alarms}
-                onToggleAlarm={handleToggleAlarm}
-                setAlarms={setAlarms}           // Pass the setAlarms function as a prop
-                setShowMap={setShowMap}         // Pass the setShowMap function as a prop
-                setEditingAlarmId={setEditingAlarmId} // Pass the setEditingAlarmId function as a prop
-                editingAlarmId={editingAlarmId} // Pass editingAlarmId as a prop
+                  onSaveAlarm={handleSaveAlarm}
+                  alarms={alarms}
+                  setAlarms={setAlarms}
+                  setShowMap={setShowMap}
                 />
               )}
             </PrivateRoute>

@@ -38,7 +38,7 @@ function Login() {
           <section className="right-section">
             <Form layout="vertical" onFinish={onFinish}>
               <Form.Item
-                label="Email"
+                label="UserName"
                 htmlFor="username"
                 name="username"
                 className="d-block"

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle, useMap } from 'react-leaflet';
 import { OpenStreetMapProvider } from 'leaflet-geosearch';
 import 'leaflet/dist/leaflet.css';
@@ -6,7 +6,7 @@ import 'leaflet-geosearch/dist/geosearch.css';
 import L from 'leaflet';
 import 'leaflet-defaulticon-compatibility';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
-import pointerImage from '../../pointer.png'; // Adjust the path as necessary
+import pointerImage from '../../pointer.png';
 
 const center = {
   lat: 12.8497,
@@ -32,23 +32,23 @@ const currentLocationIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the earth in km
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const d = R * c; // Distance in km
-  return d;
-}
+// function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+//   const R = 6371;
+//   const dLat = deg2rad(lat2 - lat1);
+//   const dLon = deg2rad(lon2 - lon1);
+//   const a =
+//     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+//     Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+//     Math.sin(dLon / 2) * Math.sin(dLon / 2);
+//   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+//   const d = R * c;
+//   return d;
+// }
 
 
-function deg2rad(deg) {
-  return deg * (Math.PI / 180);
-}
+// function deg2rad(deg) {
+//   return deg * (Math.PI / 180);
+// }
 
 function LocationMarker({ alarms, onToggleAlarm, setTriggeredAlarmName }) {
   const [position, setPosition] = useState(null);
@@ -58,23 +58,21 @@ function LocationMarker({ alarms, onToggleAlarm, setTriggeredAlarmName }) {
     map.locate().on("locationfound", function (e) {
       setPosition(e.latlng);
       map.flyTo(e.latlng, map.getZoom());
+      // const activeAlarm = alarms.find(alarm => {
+      //   if (!alarm.active) return false;
+      //   const distance = getDistanceFromLatLonInKm(
+      //     e.latlng.lat, e.latlng.lng,
+      //     alarm.latitude, alarm.longitude
+      //   );
+      //   return distance <= alarm.radius;
+      // });
 
-      // Check if the current location is within any active alarm's radius
-      const activeAlarm = alarms.find(alarm => {
-        if (!alarm.active) return false;
-        const distance = getDistanceFromLatLonInKm(
-          e.latlng.lat, e.latlng.lng,
-          alarm.latitude, alarm.longitude
-        );
-        return distance <= alarm.radius;
-      });
-
-      if (activeAlarm) {
-        setTriggeredAlarmName(activeAlarm.name);
-        alert(`You are within the area of the alarm: ${activeAlarm.name}`);
-      } else {
-        setTriggeredAlarmName(null);
-      }
+      // if (activeAlarm) {
+      //   setTriggeredAlarmName(activeAlarm.name);
+      //   alert(`You are within the area of the alarm: ${activeAlarm.name}`);
+      // } else {
+      //   setTriggeredAlarmName(null);
+      // }
     });
   }, [map, alarms, setTriggeredAlarmName]);
 
@@ -157,14 +155,14 @@ function MapEvents({ setSelectedPosition }) {
 }
 
 function Map({
-  onSaveAlarm, 
-  editingAlarm, 
-  alarms, 
-  onToggleAlarm, 
-  setAlarms, 
-  setShowMap, 
-  setEditingAlarmId, 
-  editingAlarmId
+  onSaveAlarm,
+  editingAlarm,
+  alarms,
+  onToggleAlarm,
+  setAlarms,
+  // setShowMap,
+  // setEditingAlarmId,
+  // editingAlarmId
 }) {
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [radius, setRadius] = useState(editingAlarm ? editingAlarm.radius : 1);
@@ -180,43 +178,83 @@ function Map({
     }
   }, [editingAlarm]);
 
-  const handleSaveAlarm = async (newAlarm) => {
-    if (editingAlarmId) {
-      setAlarms(alarms.map(alarm =>
-        alarm.id === editingAlarmId ? { ...alarm, ...newAlarm } : alarm
-      ));
-    } else {
+  // const handleSaveAlarm = async (newAlarm) => {
+  //   if (editingAlarmId) {
+  //     setAlarms(alarms.map(alarm =>
+  //       alarm.id === editingAlarmId ? { ...alarm, ...newAlarm } : alarm
+  //     ));
+  //   } else {
+  //     try {
+  //       // Ensure newAlarm is a plain object
+  //       const sanitizedAlarm = { ...newAlarm };
+
+  //       // Log the sanitizedAlarm to verify its structure
+  //       console.log('Sanitized Alarm:', sanitizedAlarm);
+
+  //       // Send a POST request to save the new alarm to the database
+  //       const response = await fetch('http://localhost:3000/api/alarms/', {
+  //         method: 'POST',
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //         },
+  //         body: JSON.stringify(sanitizedAlarm),
+  //       });
+
+  //       if (!response.ok) {
+  //         throw new Error('Failed to save alarm');
+  //       }
+
+  //       const savedAlarm = await response.json();
+  //       setAlarms([...alarms, { ...savedAlarm, id: savedAlarm._id }]); // Use MongoDB's generated ID
+  //     } catch (error) {
+  //       console.error('Error saving alarm:', error);
+  //     }
+  //   }
+
+  //   setShowMap(false);
+  //   setEditingAlarmId(null);
+  // };
+
+  const handleSaveAlarm = async () => {
+    if (selectedPosition && alarmName) {
+
       try {
-        // Ensure newAlarm is a plain object
-        const sanitizedAlarm = { ...newAlarm };
-  
-        // Log the sanitizedAlarm to verify its structure
-        console.log('Sanitized Alarm:', sanitizedAlarm);
-  
-        // Send a POST request to save the new alarm to the database
-        const response = await fetch('http://localhost:3000/api/alarms/', {
+        const response = await fetch('https://server-orcin-psi.vercel.app/api/alarms/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(sanitizedAlarm),
+          body: JSON.stringify({
+            name: alarmName,
+            latitude: selectedPosition.lat,
+            longitude: selectedPosition.lng,
+            radius: radius,
+            active: true,
+          })
         });
-  
+
         if (!response.ok) {
           throw new Error('Failed to save alarm');
         }
-  
+
         const savedAlarm = await response.json();
         setAlarms([...alarms, { ...savedAlarm, id: savedAlarm._id }]); // Use MongoDB's generated ID
       } catch (error) {
         console.error('Error saving alarm:', error);
       }
+
+      onSaveAlarm({
+        name: alarmName,
+        latitude: selectedPosition.lat,
+        longitude: selectedPosition.lng,
+        radius: radius,
+        active: true,
+      });
+
     }
-  
-    setShowMap(false);
-    setEditingAlarmId(null);
-  };
-  
+  }
+
+
 
   const handleCenterMap = () => {
     if (mapRef.current) {
